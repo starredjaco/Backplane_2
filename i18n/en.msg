@@ -1397,3 +1397,9 @@ reply.to = In reply to:
 reply.replying = Replying to:
 reply.cancel = Cancel reply
 reply.more = more linked
+
+# Upload failure messages resolved at the client
+upload.network = the upload did not reach the hub
+upload.failed = the upload failed
+upload.incomplete = the upload did not arrive whole
+upload.cap = attachments are limited to {mb} MB

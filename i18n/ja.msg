@@ -1420,3 +1420,9 @@ reply.to = 返信先:
 reply.replying = 返信先:
 reply.cancel = 返信をやめる
 reply.more = 件のリンク
+
+# Upload failure messages resolved at the client
+upload.network = アップロードがハブに届きませんでした
+upload.failed = アップロードに失敗しました
+upload.incomplete = アップロードが途中で途切れました
+upload.cap = 添付ファイルは{mb} MBまでです

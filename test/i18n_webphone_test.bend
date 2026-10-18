@@ -79,6 +79,9 @@ def model.about() -> J.Json:
 def model.picker() -> J.Json:
   S.Mob.picker.j.loc(I.Ja{}, J.Null{}, model.about(), "claude", "", "", "")
 
+def upload.error(tag: String) -> U.Ui:
+  F.Fixture.go(F.Fixture.thread(tag), "attach-end", "{\"uiError\":\"upload.network\",\"thread\":\"t43\",\"upload\":true}")
+
 def main() -> IO(Unit):
   +en = web("en")
   +ja = web("ja")
@@ -108,8 +111,8 @@ def main() -> IO(Unit):
     C.Check.str("phone thread en", J.Json.get_str(thread("en"), "send", "?"), "Send")
     C.Check.str("phone thread ja", J.Json.get_str(thread("ja"), "send", "?"), "送信")
     C.Check.str("phone title ja", J.Json.get_str(thread("ja"), "title", "?"), "新しいスレッド")
-    C.Check.str("phone Settings en", seen(phone.settings("en", "threads"), "Settle after 3 days"), "Settle after 3 days")
-    C.Check.str("phone Settings ja", seen(phone.settings("ja", "threads"), "3日後に完了へ移動"), "3日後に完了へ移動")
+    C.Check.str("phone Settings en", seen(phone.settings("en", "threads"), "General inactivity: 3 days"), "General inactivity: 3 days")
+    C.Check.str("phone Settings ja", seen(phone.settings("ja", "threads"), "通常の非活動期間: 3日"), "通常の非活動期間: 3日")
     C.Check.str("phone menu sheet en", seen(J.Json.show(J.Json.get_obj(S.Mob.screen(F.Fixture.menu("en")), "rowMenu")), "Copy link"), "Copy link")
     C.Check.str("phone menu sheet ja", seen(J.Json.show(J.Json.get_obj(S.Mob.screen(F.Fixture.menu("ja")), "rowMenu")), "リンクをコピー"), "リンクをコピー")
     C.Check.str("phone notification en", N.Note.body.loc(I.En{}, "fail", ""), "Failed")
@@ -122,7 +125,7 @@ def main() -> IO(Unit):
     C.Check.str("option English stored spelling", W.VLabel.option(I.En{}, "ui.theme", "dark"), "dark")
     C.Check.str("option translated label", W.VLabel.option(I.Ja{}, "ui.theme", "dark"), "ダーク")
     C.Check.str("model called dark stays intact", W.VLabel.option(I.Ja{}, "agent.model", "dark"), "dark")
-    C.Check.str("large counts retain English digits", S.Mob.set.days.label.loc(I.En{}, "1200"), "Settle after 1200 days")
+    C.Check.str("large counts retain English digits", S.Mob.set.days.label.loc(I.En{}, "1200"), "General inactivity: 1200 days")
     C.Check.str("theme value stays protocol", J.Json.get_str(screen("ja"), "theme", "?"), "")
     C.Check.str("phone plane en", seen(phone.plane("en"), "Make this the home"), "Make this the home")
     C.Check.str("phone plane ja", seen(phone.plane("ja"), "ここをホームにする"), "ここをホームにする")
@@ -165,3 +168,7 @@ def main() -> IO(Unit):
       "ツール呼び出し1件 · 実行中: Bash 1")
     C.Check.str("phone opened drawer: its rows name their run", String.join(phone.runs(S.Mob.entries(I.En{}, [M.Act{"a", "t", "tool", "Bash", "x", 0n}, M.Act{"b", "t", "tool", "Read", "y", 1n}, M.Msg{"m", "t", M.Assistant{}, "done", 2n}], M.State.empty(), "t", Map.set(&2, String, Map.new(&2, String), "fold:a", "1"), Map.new(&2, String), False{})), ","),
       "fold:a=,a=a,b=a,m=")
+    C.Check.str("web upload error en", seen(words(W.View.page(upload.error("en"))), "the upload did not reach the hub"), "the upload did not reach the hub")
+    C.Check.str("web upload error ja", seen(words(W.View.page(upload.error("ja"))), "アップロードがハブに届きませんでした"), "アップロードがハブに届きませんでした")
+    C.Check.str("phone upload error en", J.Json.get_str(S.Mob.screen(upload.error("en")), "error", ""), "the upload did not reach the hub")
+    C.Check.str("phone upload error ja", J.Json.get_str(S.Mob.screen(upload.error("ja")), "error", ""), "アップロードがハブに届きませんでした")

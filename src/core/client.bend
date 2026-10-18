@@ -11,6 +11,7 @@ import ./ref.bend as R
 import ./refview.bend as RE
 import ./i18n.bend as I
 import ./msgs.bend as MSG
+import ./winnote.bend as NT
 import ./kihealth.bend as KH
 import ./kserve.bend as KSV
 import ./kexport.bend as KEX
@@ -705,8 +706,13 @@ def Ui.delta(u: Ui, +thread: String, text: String) -> Ui:
       Ui{st, sel, dr, Map.set(&2, String, live, thread, Str.get(live, thread) ++ text), op, on, now, ad, pa, v, rid, w, er, note, nf, ob, tr}
 
 # a failed request shows its error, or the text of a failed git step
+# a failed answer's words: an upload notice id (Media.fail.cap) is kept as
+# the notice, shown in the client's language; any other text as it came
+def Ui.reply.err.text(+r: J.Json) -> String:
+  NT.Notice.upload(J.Json.get_str(r, "uiError", ""), J.Json.get_str(r, "uiDetail", ""), String.take(J.Json.get_str(r, "text", "failed"), 200n))
+
 def Ui.reply.err.std(+o: J.Json) -> String:
-  Bool.pick(String, J.Json.get_bool(o, "ok", True{}), "", J.Json.get_str(o, "error", J.Json.get_str(J.Json.get_obj(o, "result"), "error", String.take(J.Json.get_str(J.Json.get_obj(o, "result"), "text", "failed"), 200n))))
+  Bool.pick(String, J.Json.get_bool(o, "ok", True{}), "", J.Json.get_str(o, "error", J.Json.get_str(J.Json.get_obj(o, "result"), "error", Ui.reply.err.text(J.Json.get_obj(o, "result")))))
 
 # an answer: its request leaves the outbox
 def Ui.reply.err(+o: J.Json) -> String:
@@ -7313,6 +7319,9 @@ def Mpage.note.loc(+l: I.Loc, +u: Ui) -> String:
 def Mpage.note(+u: Ui) -> String:
   Mpage.note.loc(Lang.loc(u), u)
 
+def Ui.error.shown(l: I.Loc, e: String) -> String:
+  NT.Notice.shown(l, e)
+
 def Ui.error_set(u: Ui, e: String) -> Ui:
   match u:
     case Ui{st, sel, dr, live, op, on, now, ad, pa, v, rid, w, _, note, nf, ob, tr}:
@@ -7321,7 +7330,7 @@ def Ui.error_set(u: Ui, e: String) -> Ui:
 def Ui.attach.k(big: Bool, first: Bool, +u: Ui, +o: J.Json) -> Act:
   match big first:
     case True{} True{}:
-      Act{Ui.error_set(u, "attachments are limited to " ++ Nat.show(Nat.div(AT.Att.cap(), 1048576n)) ++ " MB"), Nil{}}
+      Act{Ui.error_set(u, NT.Notice.make("upload.cap", Nat.show(Nat.div(AT.Att.cap(), 1048576n)))), Nil{}}
     case True{} False{}:
       Act{u, Nil{}}
     case False{} _:
@@ -9144,10 +9153,14 @@ def Voice.fixed(+u: Ui) -> Act:
 # hub (server.bend's Upload); the answer comes back here as "attach-end":
 # the path joins the thread's attachments, or the failure shows
 
+def Upload.error(+o: J.Json) -> String:
+  NT.Notice.upload(J.Json.get_str(o, "uiError", ""), J.Json.get_str(o, "uiDetail", ""),
+    J.Json.get_str(o, "text", NT.Notice.make("upload.failed", "")))
+
 def Upload.fail(failed: Bool, +o: J.Json, u: Ui) -> Ui:
   match failed:
     case True{}:
-      Ui.error_set(u, J.Json.get_str(o, "text", "the upload failed"))
+      Ui.error_set(u, Upload.error(o))
     case False{}:
       u
 
@@ -9157,15 +9170,24 @@ def Upload.end.k(+o: J.Json, +u: Ui) -> Act:
 def Upload.start.k(big: Bool, +u: Ui, +name: String) -> Act:
   match big:
     case True{}:
-      Act{Ui.error_set(u, "attachments are limited to " ++ Nat.show(Nat.div(AT.Att.cap(), 1048576n)) ++ " MB"), Nil{}}
+      Act{Ui.error_set(u, NT.Notice.make("upload.cap", Nat.show(Nat.div(AT.Att.cap(), 1048576n)))), Nil{}}
     case False{}:
       Act{Ui.up_set(u, Ui.sel(u), name), Nil{}}
 
 def Upload.start(+u: Ui, +o: J.Json) -> Act:
   Upload.start.k(Nat.is_gt(J.Json.get_nat(o, "size", 0n), AT.Att.cap()), u, J.Json.get_str(o, "name", "file"))
 
+# A JSON primitive is not an upload reply. The parser may recover one even
+# from malformed input, so require the expected object before inspecting flags.
+def Upload.end.value(o: J.Json, +u: Ui) -> Act:
+  match o:
+    case J.Obj{fs}:
+      Upload.end.k(J.Obj{fs}, u)
+    case _:
+      Upload.end.k(J.Json.obj([J.KV{"uiError", J.Str{"upload.failed"}}, J.KV{"thread", J.Str{Ui.sel(u)}}, J.KV{"upload", J.Flag{True{}}}]), u)
+
 def Upload.end(+u: Ui, +v: String) -> Act:
-  Upload.end.k(Maybe.default(&2, J.Json, J.Json.parse(v), J.Json.obj([J.KV{"text", J.Str{"the upload failed"}}, J.KV{"thread", J.Str{Ui.sel(u)}}, J.KV{"upload", J.Flag{True{}}}])), u)
+  Upload.end.value(Maybe.default(&2, J.Json, J.Json.parse(v), J.Null{}), u)
 
 # Design history
 # --------------

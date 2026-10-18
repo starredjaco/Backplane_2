@@ -1668,7 +1668,7 @@ async function upload(action, file, scope = uploadScope(), previous = "") {
     answer = await r.text();
     JSON.parse(answer);
   } catch {
-    answer = JSON.stringify({ text: "the upload did not reach the hub", thread, upload: true });
+    answer = JSON.stringify({ uiError: "upload.network", thread, upload: true });
   }
   if (!current()) return;
   let result;try { result = JSON.parse(answer); } catch { return; }
